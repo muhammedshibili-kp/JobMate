@@ -1,0 +1,58 @@
+import bcrypt  from 'bcrypt'
+import User from '../models/User.js';
+import jwt from 'jsonwebtoken'
+
+const generateToken = (userId) => {
+    const payload = userId
+    return jwt.sign(payload,process.env.SECRET_KEY)
+}
+
+export const registerUser =async (req,res) => {
+        const {name,email,password,role} = req.body;
+        try {
+            if (!name || !email || !password || !role || password.length < 8 ) {
+                return res.json({success : false , message : "Fill all the fields"})
+            }
+
+            const userExits = await User.findOne({email})
+            if (userExits) {
+                return res.json({success : false , message : "User already exist"})
+            }
+
+            const hashedPassword = await bcrypt.hash(password,10);
+            const user = await User.create({name,email,password:hashedPassword,role})
+            const token = generateToken(user._id.toString())
+           return   res.json({success : true , token})
+
+        } catch (error) {
+            console.log(error);
+            res.json({success : false , message : error.message})
+            
+        }
+}
+
+
+export const loginUser = async (req,res) => {
+        const {email,password} = req.body;
+        const user = await User.findOne({email})
+        try {
+            if (!user) {
+                return res.json({success : false , message : "User not found"})
+            }
+            const isMatch = await bcrypt.compare(password , user.password)
+            if (!isMatch) {
+                return res.json({success : false , message : "Invalid Credentials"})
+            }
+            const token = generateToken(user._id.toString())
+            res.json({success : true , token})
+        } catch (error) {
+            console.log(error);
+            res.json({success : false , message : error.message})
+        }
+}
+
+
+
+export const getUserData = async (req,res) => {
+        
+}
